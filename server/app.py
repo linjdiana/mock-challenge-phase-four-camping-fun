@@ -62,15 +62,23 @@ class Campers(Resource):
     def post(self):
 
         data = request.get_json()
+        try:
+            new_camper = Camper(
+                id=data['id'],
+                name=data['name'],
+                age=data['age'],
+            )
 
-        new_camper = Camper(
-            id=data['id'],
-            name=data['name'],
-            age=data['age'],
-        )
-
-        db.session.add(new_camper)
-        db.session.commit()
+            db.session.add(new_camper)
+            db.session.commit()
+            
+        except Exception as e:
+            message = {
+                "errors": [e.__str__()]
+            }
+            return make_response(
+                message, 422
+            )
 
         return make_response(new_camper.to_dict(), 201)
 
@@ -78,52 +86,29 @@ api.add_resource(Campers, '/campers')
 
 class CampersByID(Resource):
     def get(self, id):
-        campers_by_id = []
-        for camper in Camper.query.filter_by(id=id):
-            camper_id_dict = {
-                "id": camper.id,
-                "name": camper.name,
-                "age": camper.age,
-                # "activities": camper.activities,
-            }
-
-            campers_by_id.append(camper_id_dict)
-        
-        if not camper: 
-            abort(404, "Camper not found")
-
+        camper = Camper.query.filter_by(id=id).first()
+        if not camper:
+            return make_response({
+                "error": "Camper not found"
+            }, 404)
         response = make_response(
-            campers_by_id,
-            200,
+            camper.to_dict(rules=('activities',)),
+            200
         )
-
         return response
+
 
 api.add_resource(CampersByID, '/campers/<int:id>')
 
 
 class Activities(Resource):
     def get(self):
-        activities = []
-        for activity in Activity.query.all():
-            activity_dict = {
-                "id": activity.id,
-                "name": activity.name,
-                "difficulty": activity.difficulty,
-            }
+        activities = Activity.query.all()
+        activities_dict_list = [activity.to_dict() for activity in activities]
 
-            activities.append(activity_dict)
-        
-        # if not camper: 
-        #     abort(404, "Camper not found")
-
-        response = make_response(
-            activities,
-            200,
-        )
-
+        response = make_response(activities_dict_list, 200)
         return response
-    
+ 
 api.add_resource(Activities, '/activities')
 
 class Signups(Resource):
