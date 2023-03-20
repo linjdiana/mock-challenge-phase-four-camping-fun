@@ -58,6 +58,15 @@ class Campers(Resource):
         )
 
         return response
+    # def get(self):
+    #     campers = Camper.query.all()
+    #     campers_dict_list = [camper.to_dict() for camper in campers]
+    #     response = make_response(
+    #         campers_dict_list,
+    #         200
+    #     )
+    #     return response
+
     
     def post(self):
 
@@ -111,9 +120,54 @@ class Activities(Resource):
  
 api.add_resource(Activities, '/activities')
 
+class ActivitiesById(Resource):
+
+    def delete(self, id):
+        activity = Activity.query.filter_by(id=id).first()
+        if not activity:
+            return make_response({
+                "error": "Activity not found"
+            }, 404)
+        try:
+            db.session.delete(activity)
+            db.session.commit()
+        except Exception as e:
+            return make_response(
+                {
+                    "errors": [e.__str__()]
+                },
+                422
+            )
+        return make_response(
+            "",
+            200
+        )
+api.add_resource(ActivitiesById, '/activities/<int:id>')
+
 class Signups(Resource):
-    def get(self):
-        pass
+    def post(self):
+        data = request.get_json()
+        try:
+            signup = Signup(
+                time=data["time"],
+                camper_id=data["camper_id"],
+                activity_id=data["activity_id"]
+            )
+            db.session.add(signup)
+            db.session.commit()
+        except Exception as e:
+            response_dict = {
+                "errors": [e.__str__()]
+            }
+            return make_response(
+                response_dict,
+                422
+            )
+        response = make_response(
+            signup.activity.to_dict(),
+            201
+        )
+        return response
 
 api.add_resource(Signups, '/signups')
 
